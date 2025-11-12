@@ -12,7 +12,7 @@ export default function Dashboard({ user, onNavigate }) {
   const fileInputRef = useRef(null)
 
   // 🔗 Replace this with your backend's ngrok URL
-  const BACKEND_URL = "http://127.0.0.1:3001"
+  const BACKEND_URL = "backend's_ngrok_url"
 
   const handleStyleSelect = (style) => {
     setSelectedStyle(style)
