@@ -4,3 +4,5 @@ flask-ngrok
 pyngrok
 sqlitecloud
 bcrypt
+onnxruntime
+accelerate
