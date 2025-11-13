@@ -142,7 +142,12 @@ def generate_cartoon(init_image):
 
 def generate_comic(init_image):
     pipe = get_pipeline("comic")
-    prompt = "a character drawn in 2D comic style, smooth shading, colorful outlines, vibrant tones, inspired by Scooby Doo, cartoon aesthetic"
+    prompt = (
+        "Comic-style, highly detailed, vibrant colors, dynamic lighting"
+        "expressive characters or environments, clean lineart, smooth shading"
+        "dramatic perspective, whimsical and lively, polished digital art, cinematic composition."
+        "Works for humans, animals, or landscapes, capturing the charm and energy of a comic or anime illustration."
+    )
     neg = "realistic, photo, human skin texture, blurry, dull colors, modern lighting"
     with torch.autocast(device):
         result = pipe(prompt=prompt, negative_prompt=neg, image=init_image,
