@@ -89,7 +89,7 @@ def signin():
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 model_paths = {
-    "pixar": "/content/drive/MyDrive/Colab Notebooks/sd_turbo_model",
+    "pixar": "/content/drive/MyDrive/Colab Notebooks/nitrosocke_classic_anim_diffusion",
     "cartoon": "/content/drive/MyDrive/Colab Notebooks/nitrosocke_classic_anim_diffusion",
     "comic": "/content/drive/MyDrive/Colab Notebooks/comic_model/dreamshaper_8",
     "ghibli": "/content/drive/MyDrive/Colab Notebooks/AnimeGANv3_cache/AnimeGANv3_large_Ghibli_c1_e299.onnx"
@@ -122,16 +122,13 @@ def get_pipeline(style):
 def generate_pixar(init_image):
     pipe = get_pipeline("pixar")
     prompt = (
-        "Pixar-style, highly detailed, vibrant colors, cinematic lighting, "
-        "soft shadows, whimsical and charming, expressive characters or environments, "
-        "smooth textures, full of depth and life, highly polished digital art. "
-        "The scene or subject is captivating, lively, and visually appealing. "
-        "Works for people, animals, or landscapes."
+        "Pixar Luca-style 3D look, soft rounded shapes, bright pastel colors, smooth textures" 
+        "warm cinematic lighting, expressive and charming, gentle shading"
     )
-    neg = "blurry, deformed, distorted, low quality, text, watermark"
+    neg = "realistic, photo, 2d, anime, noisy, harsh shadows, blur, text, watermark"
     with torch.autocast(device):
         result = pipe(prompt=prompt, negative_prompt=neg, image=init_image,
-                      strength=0.6, guidance_scale=7.5, num_inference_steps=30)
+                      strength=0.5, guidance_scale=7.5, num_inference_steps=30)
     return result.images[0]
 
 def generate_cartoon(init_image):
