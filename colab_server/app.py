@@ -103,9 +103,27 @@ def get_pipeline(style):
         return loaded_pipelines[style]
 
     path = model_paths[style]
+
     if style == "ghibli":
         print(f"🧩 Loading ONNX model for Ghibli from {path}")
-        loaded_pipelines[style] = ort.InferenceSession(path)
+
+        # ----------------------------
+        # ✅ GPU FIRST (CUDAExecutionProvider)
+        # ----------------------------
+        try:
+            loaded_pipelines[style] = ort.InferenceSession(
+                path,
+                providers=["CUDAExecutionProvider", "CPUExecutionProvider"]
+            )
+            print("⚡ Ghibli ONNX is running on GPU!")
+        except Exception as e:
+            print("⚠️ GPU unavailable for ONNX, falling back to CPU:", e)
+            loaded_pipelines[style] = ort.InferenceSession(
+                path,
+                providers=["CPUExecutionProvider"]
+            )
+            print("🐌 Ghibli ONNX is using CPU.")
+
     else:
         print(f"🔄 Loading diffusion model for {style}...")
         pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
@@ -114,6 +132,7 @@ def get_pipeline(style):
             safety_checker=None
         ).to(device)
         loaded_pipelines[style] = pipe
+
     return loaded_pipelines[style]
 
 # ==========================================================
@@ -122,7 +141,7 @@ def get_pipeline(style):
 def generate_pixar(init_image):
     pipe = get_pipeline("pixar")
     prompt = (
-        "Pixar Luca-style 3D look, soft rounded shapes, bright pastel colors, smooth textures" 
+        "Pixar Luca-style 3D look, soft rounded shapes, bright pastel colors, smooth textures"
         "warm cinematic lighting, expressive and charming, gentle shading"
     )
     neg = "realistic, photo, 2d, anime, noisy, harsh shadows, blur, text, watermark"
@@ -145,8 +164,7 @@ def generate_comic(init_image):
     prompt = (
         "Comic-style, highly detailed, vibrant colors, dynamic lighting"
         "expressive characters or environments, clean lineart, smooth shading"
-        "dramatic perspective, whimsical and lively, polished digital art, cinematic composition."
-        "Works for humans, animals, or landscapes, capturing the charm and energy of a comic or anime illustration."
+        "dramatic perspective, whimsical and lively, polished digital art."
     )
     neg = "realistic, photo, human skin texture, blurry, dull colors, modern lighting"
     with torch.autocast(device):
@@ -159,7 +177,10 @@ def generate_ghibli(init_image):
     img = init_image.resize((512, 512)).convert("RGB")
     img_np = np.array(img).astype(np.float32) / 255.0
     img_np = np.expand_dims(np.transpose(img_np, (2, 0, 1)), 0)
+
+    # ✔ Correct input key for AnimeGANv3
     output = session.run(None, {"AnimeGANv3_input:0": img_np})[0][0]
+
     output = np.clip(np.transpose(output, (1, 2, 0)) * 255, 0, 255).astype(np.uint8)
     return Image.fromarray(output)
 
@@ -173,8 +194,8 @@ def generate_oil_pastel(file):
 
 def generate_sketch(file):
     np_img = np.frombuffer(file.read(), np.uint8)
-    image = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     inverted = cv2.bitwise_not(gray)
     blurred = cv2.GaussianBlur(inverted, (21, 21), 0)
     inverted_blur = cv2.bitwise_not(blurred)
@@ -190,16 +211,15 @@ def stylize(style):
     style = style.lower()
     if "image" not in request.files:
         return jsonify({"error": "No image uploaded"}), 400
+
     file = request.files["image"]
 
     try:
         if style == "sketch":
-            img_base64 = generate_sketch(file)
-            return jsonify({"message": "Pencil Sketch created", "image": img_base64})
+            return jsonify({"image": generate_sketch(file)})
 
         if style == "oil":
-            img_base64 = generate_oil_pastel(file)
-            return jsonify({"message": "Oil Pastel created", "image": img_base64})
+            return jsonify({"image": generate_oil_pastel(file)})
 
         init_image = Image.open(file.stream).convert("RGB").resize((512, 512))
 
@@ -216,9 +236,9 @@ def stylize(style):
 
         buffered = io.BytesIO()
         img.save(buffered, format="PNG")
-        img_base64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
-        print(f"✅ {style.capitalize()} stylization complete!")
-        return jsonify({"message": f"{style.capitalize()} stylization successful", "image": img_base64})
+        img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+        return jsonify({"image": img_base64})
 
     except Exception as e:
         print("❌ Error:", e)
