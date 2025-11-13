@@ -92,8 +92,7 @@ model_paths = {
     "pixar": "/content/drive/MyDrive/Colab Notebooks/sd_turbo_model",
     "cartoon": "/content/drive/MyDrive/Colab Notebooks/nitrosocke_classic_anim_diffusion",
     "comic": "/content/drive/MyDrive/Colab Notebooks/comic_model/dreamshaper_8",
-    "ghibli": "/content/drive/MyDrive/Colab Notebooks/AnimeGANv3_cache/AnimeGANv3_large_Ghibli_c1_e299.onnx",
-    "oil": "/content/drive/MyDrive/Colab Notebooks/comic_model/dreamshaper_8"
+    "ghibli": "/content/drive/MyDrive/Colab Notebooks/AnimeGANv3_cache/AnimeGANv3_large_Ghibli_c1_e299.onnx"
 }
 
 loaded_pipelines = {}
@@ -158,7 +157,7 @@ def generate_ghibli(init_image):
     img = init_image.resize((512, 512)).convert("RGB")
     img_np = np.array(img).astype(np.float32) / 255.0
     img_np = np.expand_dims(np.transpose(img_np, (2, 0, 1)), 0)
-    output = session.run(None, {"input": img_np})[0][0]
+    output = session.run(None, {"AnimeGANv3_input:0": img_np})[0][0]
     output = np.clip(np.transpose(output, (1, 2, 0)) * 255, 0, 255).astype(np.uint8)
     return Image.fromarray(output)
 
@@ -167,8 +166,7 @@ def generate_oil_pastel(file):
     img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     grainy_oil = cv2.xphoto.oilPainting(img_rgb, size=2, dynRatio=1)
-    grainy_oil_rgb = cv2.cvtColor(grainy_oil, cv2.COLOR_BGR2RGB)
-    _, buffer = cv2.imencode('.png', grainy_oil_rgb)
+    _, buffer = cv2.imencode('.png', grainy_oil)
     return base64.b64encode(buffer).decode('utf-8')
 
 def generate_sketch(file):
@@ -179,7 +177,6 @@ def generate_sketch(file):
     blurred = cv2.GaussianBlur(inverted, (21, 21), 0)
     inverted_blur = cv2.bitwise_not(blurred)
     sketch = cv2.divide(gray, inverted_blur, scale=256.0)
-    sketch = cv2.multiply(sketch, sketch, scale=1.0/255.0)
     _, buffer = cv2.imencode('.png', sketch)
     return base64.b64encode(buffer).decode('utf-8')
 
@@ -237,5 +234,5 @@ def home():
 # ==========================================================
 if __name__ == "__main__":
     ensure_schema()
-    print("🔥 Starting DreamInk Modular Flask backend with ngrok...")
+    print("🔥 Starting DreamInk Modular Flask backend...")
     app.run(host="0.0.0.0", port=3001, debug=True)

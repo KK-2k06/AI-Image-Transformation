@@ -41,6 +41,7 @@ export default function Dashboard({ user, onNavigate }) {
       case 'studio ghibli': return 'ghibli'
       case 'oil painting': return 'oil'
       case 'pencil sketch': return 'sketch'
+      case 'cartoon': return 'cartoon'
       default: return 'pixar'
     }
   }
