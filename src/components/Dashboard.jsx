@@ -100,13 +100,22 @@ const fetchHistory = async () => {
   setLoadingHistory(true)
   try {
     console.log('🔍 Fetching from:', `${BACKEND_URL}/api/history/${user.id}`)
-    const res = await fetch(`${BACKEND_URL}/api/history/${user.id}`)
+    const res = await fetch(`${BACKEND_URL}/api/history/${user.id}`, {
+      headers: {
+        'Accept': 'application/json',
+        'ngrok-skip-browser-warning': 'true'  // ✅ Bypass ngrok warning page
+      }
+    })
     
     console.log('📡 Response status:', res.status)
     console.log('📡 Response headers:', res.headers.get('content-type'))
     
-    const data = await res.json()
-    console.log('📦 Raw data received:', data)
+    // Check if response is actually JSON
+    const text = await res.text()
+    console.log('📄 Raw response (first 200 chars):', text.substring(0, 200))
+    
+    const data = JSON.parse(text)
+    console.log('📦 Parsed data:', data)
     console.log('📦 History array:', data.history)
     
     if (res.ok) {
