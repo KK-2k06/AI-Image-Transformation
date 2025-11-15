@@ -95,28 +95,38 @@ export default function Dashboard({ user, onNavigate }) {
     }
   }
 
-  const fetchHistory = async () => {
-    setLoadingHistory(true)
-    try {
-      const res = await fetch(`${BACKEND_URL}/api/history/${user.id}`)
-      const data = await res.json()
-      if (res.ok) {
-        // normalize base64 to always be a valid data URI
-        const hist = (data.history || []).map(item => ({
-          ...item,
-          transformed_image: cleanBase64(item.transformed_image),
-          original_image: cleanBase64(item.original_image)
-        }))
-        setHistory(hist)
-      } else {
-        console.error('Failed to fetch history', data)
-      }
-    } catch (err) {
-      console.error('Error fetching history:', err)
-    } finally {
-      setLoadingHistory(false)
+
+const fetchHistory = async () => {
+  setLoadingHistory(true)
+  try {
+    console.log('🔍 Fetching from:', `${BACKEND_URL}/api/history/${user.id}`)
+    const res = await fetch(`${BACKEND_URL}/api/history/${user.id}`)
+    
+    console.log('📡 Response status:', res.status)
+    console.log('📡 Response headers:', res.headers.get('content-type'))
+    
+    const data = await res.json()
+    console.log('📦 Raw data received:', data)
+    console.log('📦 History array:', data.history)
+    
+    if (res.ok) {
+      // normalize base64 to always be a valid data URI
+      const hist = (data.history || []).map(item => ({
+        ...item,
+        transformed_image: cleanBase64(item.transformed_image),
+        original_image: cleanBase64(item.original_image)
+      }))
+      console.log('✅ Processed history:', hist)
+      setHistory(hist)
+    } else {
+      console.error('❌ Failed to fetch history', data)
     }
+  } catch (err) {
+    console.error('💥 Error fetching history:', err)
+  } finally {
+    setLoadingHistory(false)
   }
+}
 
   const handleShowHistory = () => {
     setSelectedStyle(null)
