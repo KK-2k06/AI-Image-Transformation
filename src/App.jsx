@@ -6,7 +6,7 @@ import Dashboard from './components/Dashboard.jsx'
 
 export default function App() {
   const [page, setPage] = useState('landing')
-  const [user, setUser] = useState({ id: null, firstName: '', lastName: '', email: '' })
+  const [user, setUser] = useState({ id: null, firstName: '', lastName: '', email: '', generationsLeft: 5 })
   const [transitioning, setTransitioning] = useState(false)
 
   const navigate = (targetPage) => {
@@ -37,7 +37,13 @@ export default function App() {
                 throw new Error(data.error || 'Sign in failed')
               }
               const data = await res.json()
-              setUser({ id: data.id, firstName: data.firstName, lastName: data.lastName, email: data.email })
+              setUser({ 
+                id: data.id, 
+                firstName: data.firstName, 
+                lastName: data.lastName, 
+                email: data.email,
+                generationsLeft: data.generationsLeft || 5
+              })
               navigate('dashboard')
             } catch (err) {
               alert(err.message)

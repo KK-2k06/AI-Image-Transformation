@@ -40,6 +40,7 @@ def ensure_schema():
             last_name TEXT NOT NULL,
             email TEXT NOT NULL UNIQUE,
             password_hash TEXT NOT NULL,
+            generations_left INTEGER DEFAULT 5,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -50,6 +51,29 @@ def ensure_schema():
             style TEXT NOT NULL,
             original_image TEXT NOT NULL,
             transformed_image TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            payment_method TEXT NOT NULL,
+            upi_id TEXT,
+            card_full_name TEXT,
+            card_email TEXT,
+            card_address TEXT,
+            card_city TEXT,
+            card_state TEXT,
+            card_zip_code TEXT,
+            card_name_on_card TEXT,
+            card_number TEXT,
+            card_exp_month TEXT,
+            card_exp_year TEXT,
+            card_cvv TEXT,
+            amount REAL NOT NULL,
+            generations_added INTEGER NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
@@ -94,14 +118,20 @@ def signin():
         return jsonify({'error': 'Missing credentials'}), 400
 
     conn = get_db_connection()
-    cursor = conn.execute('SELECT id, first_name, last_name, email, password_hash FROM users WHERE email = ?', (email.lower(),))
+    cursor = conn.execute('SELECT id, first_name, last_name, email, password_hash, generations_left FROM users WHERE email = ?', (email.lower(),))
     user = cursor.fetchone()
     conn.close()
 
     if not user or not bcrypt.checkpw(password.encode('utf-8'), user[4].encode('utf-8')):
         return jsonify({'error': 'Invalid email or password'}), 401
 
-    return jsonify({'id': user[0], 'firstName': user[1], 'lastName': user[2], 'email': user[3]})
+    return jsonify({
+        'id': user[0], 
+        'firstName': user[1], 
+        'lastName': user[2], 
+        'email': user[3],
+        'generationsLeft': user[5] if user[5] is not None else 5
+    })
 
 # ==========================================================
 # 🎨 MODEL CONFIGURATION
@@ -246,6 +276,24 @@ def stylize(style):
     file = request.files["image"]
     user_id = request.form.get("user_id")  # Get user_id from form data
 
+    # Check generations left for the user
+    if user_id:
+        try:
+            conn = get_db_connection()
+            cursor = conn.execute('SELECT generations_left FROM users WHERE id = ?', (int(user_id),))
+            user = cursor.fetchone()
+            conn.close()
+            
+            if user:
+                generations_left = user[0] if user[0] is not None else 5
+                if generations_left <= 0:
+                    return jsonify({"error": "No generations left", "generationsLeft": 0}), 403
+            else:
+                return jsonify({"error": "User not found"}), 404
+        except Exception as e:
+            print(f"⚠️ Error checking generations: {e}")
+            return jsonify({"error": "Failed to check generations"}), 500
+
     try:
         # Read original image for history
         file.seek(0)
@@ -277,17 +325,31 @@ def stylize(style):
             img.save(buffered, format="PNG")
             transformed_img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-        # Save to history if user_id is provided
+        # Save to history and decrement counter if user_id is provided
         if user_id:
             try:
                 conn = get_db_connection()
+                # Save history
                 conn.execute(
                     'INSERT INTO image_history (user_id, style, original_image, transformed_image) VALUES (?, ?, ?, ?)',
                     (int(user_id), style, original_img_base64, transformed_img_base64)
                 )
+                # Decrement generations_left
+                conn.execute(
+                    'UPDATE users SET generations_left = generations_left - 1 WHERE id = ?',
+                    (int(user_id),)
+                )
                 conn.commit()  # Commit the transaction
+                
+                # Get updated generations_left
+                cursor = conn.execute('SELECT generations_left FROM users WHERE id = ?', (int(user_id),))
+                updated_user = cursor.fetchone()
+                new_generations_left = updated_user[0] if updated_user else 0
+                
                 conn.close()
-                print(f"✅ History saved for user {user_id}, style: {style}")
+                print(f"✅ History saved for user {user_id}, style: {style}, generations left: {new_generations_left}")
+                
+                return jsonify({"image": transformed_img_base64, "generationsLeft": new_generations_left})
             except Exception as e:
                 print(f"⚠️ Failed to save history: {e}")
                 import traceback
@@ -298,6 +360,100 @@ def stylize(style):
     except Exception as e:
         print("❌ Error:", e)
         return jsonify({"error": str(e)}), 500
+
+# ==========================================================
+# 👤 USER ENDPOINTS
+# ==========================================================
+@app.route("/api/user/<int:user_id>/generations", methods=["GET"])
+def get_generations(user_id):
+    """Get remaining generations for a user"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.execute('SELECT generations_left FROM users WHERE id = ?', (user_id,))
+        user = cursor.fetchone()
+        conn.close()
+        
+        if user:
+            return jsonify({'generationsLeft': user[0] if user[0] is not None else 5})
+        else:
+            return jsonify({'error': 'User not found'}), 404
+    except Exception as e:
+        print("❌ Error fetching generations:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/payment", methods=["POST"])
+def process_payment():
+    """Process payment and add generations"""
+    data = request.get_json()
+    user_id = data.get('user_id')
+    payment_method = data.get('payment_method')
+    upi_id = data.get('upi_id')
+    card_details = data.get('card_details', {})
+    amount = data.get('amount', 50)
+    generations_to_add = data.get('generations', 5)
+    
+    if not user_id or not payment_method:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    try:
+        conn = get_db_connection()
+        
+        # Record payment with all details
+        if payment_method == "Card":
+            # Store all card details
+            conn.execute(
+                '''INSERT INTO payments (
+                    user_id, payment_method, amount, generations_added,
+                    card_full_name, card_email, card_address, card_city, card_state, card_zip_code,
+                    card_name_on_card, card_number, card_exp_month, card_exp_year, card_cvv
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (
+                    int(user_id), payment_method, float(amount), int(generations_to_add),
+                    card_details.get('fullName'), card_details.get('email'), 
+                    card_details.get('address'), card_details.get('city'),
+                    card_details.get('state'), card_details.get('zipCode'),
+                    card_details.get('nameOnCard'), card_details.get('cardNumber'),
+                    card_details.get('expMonth'), card_details.get('expYear'),
+                    card_details.get('cvv')
+                )
+            )
+        else:
+            # Store UPI payment
+            conn.execute(
+                'INSERT INTO payments (user_id, payment_method, upi_id, amount, generations_added) VALUES (?, ?, ?, ?, ?)',
+                (int(user_id), payment_method, upi_id, float(amount), int(generations_to_add))
+            )
+        
+        # Add generations to user
+        conn.execute(
+            'UPDATE users SET generations_left = generations_left + ? WHERE id = ?',
+            (int(generations_to_add), int(user_id))
+        )
+        
+        conn.commit()
+        
+        # Get updated generations
+        cursor = conn.execute('SELECT generations_left FROM users WHERE id = ?', (int(user_id),))
+        user = cursor.fetchone()
+        new_generations = user[0] if user else 0
+        
+        conn.close()
+        
+        print(f"✅ Payment processed for user {user_id}: +{generations_to_add} generations")
+        
+        return jsonify({
+            'success': True,
+            'generationsLeft': new_generations,
+            'message': f'{generations_to_add} generations added successfully!'
+        })
+        
+    except Exception as e:
+        print(f"❌ Payment error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 
 # ==========================================================
 # 📜 HISTORY ENDPOINTS
