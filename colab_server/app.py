@@ -202,11 +202,11 @@ def generate_pixar(init_image):
 
 def generate_cartoon(init_image):
     pipe = get_pipeline("cartoon")
-    prompt = "2d cartoon, classic disney animation style, clean lines, smooth shading, same features"
-    neg = "realistic, 3d render, photo, distortion, blur, text, watermark"
+    prompt = "classic disney style, best quality, original features"
+    neg = "worst quality, extra objects, bad features"
     with torch.autocast(device):
         result = pipe(prompt=prompt, negative_prompt=neg, image=init_image,
-                      strength=0.5, guidance_scale=8.0, num_inference_steps=25)
+                      strength=0.5, guidance_scale=8.0, num_inference_steps=35)
     return result.images[0]
 
 def generate_comic(init_image):
