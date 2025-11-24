@@ -1,5 +1,5 @@
 # ==========================================================
-# 🎨 DREAMINK — Modular Backend (6 Styles + Auth + SQLiteCloud)
+# 🎨 AI Image Transformation — Modular Backend (6 Styles + Auth + SQLiteCloud)
 # ==========================================================
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -195,18 +195,20 @@ def generate_pixar(init_image):
         "warm cinematic lighting, expressive and charming, gentle shading"
     )
     neg = "realistic, photo, 2d, anime, noisy, harsh shadows, blur, text, watermark"
-    with torch.autocast(device):
+    generator = torch.Generator(device).manual_seed(42)
+    with torch.autocast("cuda", enabled=(device == "cuda")):
         result = pipe(prompt=prompt, negative_prompt=neg, image=init_image,
-                      strength=0.5, guidance_scale=7.5, num_inference_steps=30)
+                      strength=0.5, guidance_scale=7.5, num_inference_steps=35, generator=generator)
     return result.images[0]
 
 def generate_cartoon(init_image):
     pipe = get_pipeline("cartoon")
     prompt = "classic disney style, best quality, original features"
     neg = "worst quality, extra objects, bad features"
-    with torch.autocast(device):
+    generator = torch.Generator(device).manual_seed(42)
+    with torch.autocast("cuda", enabled=(device == "cuda")):
         result = pipe(prompt=prompt, negative_prompt=neg, image=init_image,
-                      strength=0.5, guidance_scale=8.0, num_inference_steps=35)
+                      strength=0.5, guidance_scale=8.0, num_inference_steps=35, generator=generator)
     return result.images[0]
 
 def generate_comic(init_image):
@@ -217,9 +219,10 @@ def generate_comic(init_image):
         "dramatic perspective, whimsical and lively, polished digital art."
     )
     neg = "realistic, photo, human skin texture, blurry, dull colors, modern lighting"
-    with torch.autocast(device):
+    generator = torch.Generator(device).manual_seed(42)
+    with torch.autocast("cuda", enabled=(device == "cuda")):
         result = pipe(prompt=prompt, negative_prompt=neg, image=init_image,
-                      strength=0.45, guidance_scale=8.5, num_inference_steps=28)
+                      strength=0.45, guidance_scale=8.5, num_inference_steps=35, generator=generator)
     return result.images[0]
 
 def generate_ghibli(init_image):
@@ -308,7 +311,7 @@ def stylize(style):
         elif style == "oil":
             transformed_img_base64 = generate_oil_pastel(file)
         else:
-            init_image = Image.open(file.stream).convert("RGB").resize((512, 512))
+            init_image = Image.open(file.stream).convert("RGB").resize((768, 768))
 
             if style == "pixar":
                 img = generate_pixar(init_image)
