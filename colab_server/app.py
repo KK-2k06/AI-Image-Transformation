@@ -198,7 +198,7 @@ def generate_pixar(init_image):
     generator = torch.Generator(device).manual_seed(42)
     with torch.autocast("cuda", enabled=(device == "cuda")):
         result = pipe(prompt=prompt, negative_prompt=neg, image=init_image,
-                      strength=0.5, guidance_scale=7.5, num_inference_steps=35, generator=generator)
+                      strength=0.5, guidance_scale=7.5, num_inference_steps=15, generator=generator)
     return result.images[0]
 
 def generate_cartoon(init_image):
