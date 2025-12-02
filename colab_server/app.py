@@ -178,7 +178,7 @@ def get_pipeline(style):
         print(f"🔄 Loading diffusion model for {style}...")
         pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
             path,
-            torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+            dtype=torch.float16 if device == "cuda" else torch.float32,
             safety_checker=None
         ).to(device)
         loaded_pipelines[style] = pipe
@@ -198,7 +198,7 @@ def generate_pixar(init_image):
     generator = torch.Generator(device).manual_seed(42)
     with torch.autocast("cuda", enabled=(device == "cuda")):
         result = pipe(prompt=prompt, negative_prompt=neg, image=init_image,
-                      strength=0.5, guidance_scale=7.5, num_inference_steps=15, generator=generator)
+                      strength=0.5, guidance_scale=7.5, num_inference_steps=35, generator=generator)
     return result.images[0]
 
 def generate_cartoon(init_image):
