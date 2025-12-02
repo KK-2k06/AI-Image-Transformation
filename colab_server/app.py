@@ -507,12 +507,12 @@ def delete_history(history_id):
 # ==========================================================
 @app.route("/")
 def home():
-    return jsonify({"message": "DreamInk Modular Backend is Live!"})
+    return jsonify({"message": "AI Image Transformation Modular Backend is Live!"})
 
 # ==========================================================
 # 🚀 MAIN ENTRY
 # ==========================================================
 if __name__ == "__main__":
     ensure_schema()
-    print("🔥 Starting DreamInk Modular Flask backend...")
+    print("🔥 Starting AI Image Transformation Modular Flask backend...")
     app.run(host="0.0.0.0", port=3001, debug=True)

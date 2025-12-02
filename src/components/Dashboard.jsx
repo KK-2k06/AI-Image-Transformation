@@ -661,7 +661,7 @@ export default function Dashboard({ user, onNavigate }) {
                       <div className="flex gap-3">
                         <a
                           href={outputImage}
-                          download={`dreamink-${selectedStyle.title
+                          download={`AI Image Transformation-${selectedStyle.title
                             .toLowerCase()
                             .replace(/\s+/g, "-")}.png`}
                           className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg hover:from-indigo-700 hover:to-purple-700 text-center transition-all duration-200"
