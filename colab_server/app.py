@@ -106,6 +106,7 @@ def signup():
         'INSERT INTO users (first_name, last_name, email, password_hash) VALUES (?, ?, ?, ?)',
         (first_name, last_name, email, password_hash)
     )
+    conn.commit()
     conn.close()
     return jsonify({'firstName': first_name, 'lastName': last_name, 'email': email}), 201
 
