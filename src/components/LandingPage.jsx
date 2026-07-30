@@ -518,7 +518,7 @@ export default function LandingPage({ onNavigate }) {
               AI Image Transformation
             </h3>
             <p className="text-gray-400 mb-4">
-              For inquiries, please contact us at: <a href="mailto:contact@aitransform.com" className="text-indigo-400 hover:text-indigo-300 transition-colors">contact@aitransform.com</a>
+              For inquiries, please contact us at: <a href="mailto:kumar.tech3005@gmail.com" className="text-indigo-400 hover:text-indigo-300 transition-colors">aitransform@gmail.com</a>
             </p>
             <p className="text-gray-500 text-sm">
               © {year} Infosys Springboard Internship Project. All rights reserved.
